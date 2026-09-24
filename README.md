@@ -1,4 +1,3 @@
-````markdown
 # DocuPilot
 
 > AI-Powered Document Intelligence & Knowledge Assistant
@@ -78,7 +77,6 @@ LLM
 Grounded Answer
     ↓
 Source References
-````
 
 ---
 
