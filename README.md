@@ -77,6 +77,7 @@ LLM
 Grounded Answer
     ↓
 Source References
+```
 
 ---
 
