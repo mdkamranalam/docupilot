@@ -10,6 +10,16 @@ Follow these strict guidelines:
 4. Tone: Clear, objective, concise, and professional.
 """
 
+CONDENSE_QUESTION_PROMPT = """Given the following conversation history and a follow-up question from the user, rephrase the follow-up question to be a standalone search query that contains all necessary context for document retrieval.
+
+Do NOT answer the question. Only return the reformulated standalone query. If the question is already standalone, return it as-is.
+
+Conversation History:
+{chat_history}
+
+Follow-up Question: {question}
+Standalone Search Query:"""
+
 
 def build_rag_context(chunks: List[Dict[str, Any]]) -> str:
     """Formats retrieved chunks into a clean context block with clear source markers."""
@@ -36,3 +46,4 @@ Question:
 {question}
 
 Answer:"""
+
