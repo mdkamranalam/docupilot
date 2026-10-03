@@ -116,6 +116,10 @@ def delete_document(document_id: str, db: Session = Depends(get_db)):
     return {"status": "deleted", "document_id": document_id}
 
 
+from fastapi.responses import StreamingResponse
+import json
+
+
 @router.post("/chat/query", response_model=RAGAnswerResponse)
 def query_rag(
     request: ChatQueryRequest,
@@ -129,3 +133,22 @@ def query_rag(
         conversation_history=request.conversation_history,
         top_k=request.top_k
     )
+
+
+@router.post("/chat/stream")
+def stream_rag(
+    request: ChatQueryRequest,
+    db: Session = Depends(get_db)
+):
+    """Streams answer tokens in real-time for interactive frontends."""
+    qa_service = QAService(db)
+    return StreamingResponse(
+        qa_service.stream_question(
+            question=request.question,
+            document_id=request.document_id,
+            conversation_history=request.conversation_history,
+            top_k=request.top_k
+        ),
+        media_type="text/plain"
+    )
+

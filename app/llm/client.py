@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Iterator
 from openai import OpenAI
 from app.config.settings import settings
 
@@ -12,6 +12,15 @@ class BaseLLMClient(ABC):
         user_prompt: str,
         chat_history: Optional[List[Dict[str, str]]] = None
     ) -> str:
+        pass
+
+    @abstractmethod
+    def stream_answer(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        chat_history: Optional[List[Dict[str, str]]] = None
+    ) -> Iterator[str]:
         pass
 
 
@@ -33,6 +42,19 @@ class GroqLLMClient(BaseLLMClient):
             else None
         )
 
+    def _build_messages(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        chat_history: Optional[List[Dict[str, str]]] = None
+    ) -> List[Dict[str, str]]:
+        messages = [{"role": "system", "content": system_prompt}]
+        if chat_history:
+            for turn in chat_history[-6:]:
+                messages.append({"role": turn["role"], "content": turn["content"]})
+        messages.append({"role": "user", "content": user_prompt})
+        return messages
+
     def generate_answer(
         self,
         system_prompt: str,
@@ -44,20 +66,33 @@ class GroqLLMClient(BaseLLMClient):
                 "GROQ_API_KEY is not set. Get a free API key at https://console.groq.com/keys and paste it in your .env file."
             )
 
-        messages = [{"role": "system", "content": system_prompt}]
-
-        if chat_history:
-            for turn in chat_history[-6:]:
-                messages.append({"role": turn["role"], "content": turn["content"]})
-
-        messages.append({"role": "user", "content": user_prompt})
-
+        messages = self._build_messages(system_prompt, user_prompt, chat_history)
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             temperature=0.1,
         )
         return response.choices[0].message.content.strip()
+
+    def stream_answer(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        chat_history: Optional[List[Dict[str, str]]] = None
+    ) -> Iterator[str]:
+        if not self.client:
+            raise ValueError("GROQ_API_KEY is not set.")
+
+        messages = self._build_messages(system_prompt, user_prompt, chat_history)
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=0.1,
+            stream=True
+        )
+        for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
 
 
 class OpenAILLMClient(BaseLLMClient):
@@ -68,6 +103,19 @@ class OpenAILLMClient(BaseLLMClient):
         self.model = model or settings.LLM_MODEL
         self.client = OpenAI(api_key=self.api_key) if self.api_key else None
 
+    def _build_messages(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        chat_history: Optional[List[Dict[str, str]]] = None
+    ) -> List[Dict[str, str]]:
+        messages = [{"role": "system", "content": system_prompt}]
+        if chat_history:
+            for turn in chat_history[-6:]:
+                messages.append({"role": turn["role"], "content": turn["content"]})
+        messages.append({"role": "user", "content": user_prompt})
+        return messages
+
     def generate_answer(
         self,
         system_prompt: str,
@@ -77,20 +125,33 @@ class OpenAILLMClient(BaseLLMClient):
         if not self.client:
             raise ValueError("OPENAI_API_KEY is not set.")
 
-        messages = [{"role": "system", "content": system_prompt}]
-
-        if chat_history:
-            for turn in chat_history[-6:]:
-                messages.append({"role": turn["role"], "content": turn["content"]})
-
-        messages.append({"role": "user", "content": user_prompt})
-
+        messages = self._build_messages(system_prompt, user_prompt, chat_history)
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             temperature=0.1,
         )
         return response.choices[0].message.content.strip()
+
+    def stream_answer(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        chat_history: Optional[List[Dict[str, str]]] = None
+    ) -> Iterator[str]:
+        if not self.client:
+            raise ValueError("OPENAI_API_KEY is not set.")
+
+        messages = self._build_messages(system_prompt, user_prompt, chat_history)
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=0.1,
+            stream=True
+        )
+        for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
 
 
 class MockLLMClient(BaseLLMClient):
@@ -106,6 +167,16 @@ class MockLLMClient(BaseLLMClient):
             return "The uploaded documents do not contain enough information to answer this question."
         return "According to the uploaded documents, this is a simulated grounded answer based on the retrieved context."
 
+    def stream_answer(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        chat_history: Optional[List[Dict[str, str]]] = None
+    ) -> Iterator[str]:
+        full_text = self.generate_answer(system_prompt, user_prompt, chat_history)
+        for word in full_text.split(" "):
+            yield word + " "
+
 
 def get_llm_client() -> BaseLLMClient:
     if settings.LLM_PROVIDER == "groq" and settings.GROQ_API_KEY and settings.GROQ_API_KEY != "gsk_your_groq_api_key_here":
@@ -113,3 +184,4 @@ def get_llm_client() -> BaseLLMClient:
     elif settings.LLM_PROVIDER == "openai" and settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "your_openai_api_key_here":
         return OpenAILLMClient()
     return MockLLMClient()
+

@@ -141,54 +141,55 @@ if user_input := st.chat_input("Ask a question about your documents..."):
     with st.chat_message("user"):
         st.write(user_input)
 
-    # Call backend
+    # Call backend with real-time token streaming
     with st.chat_message("assistant"):
-        with st.spinner("Retrieving grounded context and formulating answer..."):
-            try:
-                # Prepare conversation history
-                history = [
-                    {"role": m["role"], "content": m["content"]}
-                    for m in st.session_state.messages[:-1]
-                ]
+        history = [
+            {"role": m["role"], "content": m["content"]}
+            for m in st.session_state.messages[:-1]
+        ]
+        payload = {
+            "question": user_input,
+            "document_id": st.session_state.selected_doc_id,
+            "conversation_history": history,
+            "top_k": 4
+        }
 
-                payload = {
-                    "question": user_input,
-                    "document_id": st.session_state.selected_doc_id,
-                    "conversation_history": history,
-                    "top_k": 4
-                }
+        try:
+            # First fetch sources via query endpoint
+            source_resp = requests.post(f"{API_BASE_URL}/chat/query", json=payload, timeout=30)
+            sources = []
+            if source_resp.status_code == 200:
+                sources = source_resp.json().get("sources", [])
 
-                resp = requests.post(f"{API_BASE_URL}/chat/query", json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    answer_text = data["answer"]
-                    sources = data.get("sources", [])
+            # Real-time streaming generator
+            def token_stream_generator():
+                with requests.post(f"{API_BASE_URL}/chat/stream", json=payload, stream=True, timeout=30) as r:
+                    for chunk in r.iter_content(chunk_size=None, decode_unicode=True):
+                        if chunk:
+                            yield chunk
 
-                    st.write(answer_text)
+            answer_text = st.write_stream(token_stream_generator)
 
-                    if sources:
-                        with st.expander("🔍 View Referenced Sources"):
-                            for s in sources:
-                                st.markdown(
-                                    f"""
-                                    <div class="source-card">
-                                        <div><strong>📄 {s['filename']}</strong> | <span class="badge">Page {s['page']}</span> | <span class="badge">Similarity: {s['similarity_score']}</span></div>
-                                        <div style="margin-top: 6px; color: #475569;"><em>"{s['excerpt']}"</em></div>
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True
-                                )
+            if sources:
+                with st.expander("🔍 View Referenced Sources"):
+                    for s in sources:
+                        st.markdown(
+                            f"""
+                            <div class="source-card">
+                                <div><strong>📄 {s['filename']}</strong> | <span class="badge">Page {s['page']}</span> | <span class="badge">Similarity: {s['similarity_score']}</span></div>
+                                <div style="margin-top: 6px; color: #475569;"><em>"{s['excerpt']}"</em></div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": answer_text,
-                        "sources": sources
-                    })
-                else:
-                    err_msg = f"Backend Error: {resp.text}"
-                    st.error(err_msg)
-                    st.session_state.messages.append({"role": "assistant", "content": err_msg})
-            except Exception as e:
-                err_msg = f"Connection failed: {e}. Is the FastAPI server running?"
-                st.error(err_msg)
-                st.session_state.messages.append({"role": "assistant", "content": err_msg})
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer_text,
+                "sources": sources
+            })
+        except Exception as e:
+            err_msg = f"Connection failed: {e}. Is the FastAPI server running?"
+            st.error(err_msg)
+            st.session_state.messages.append({"role": "assistant", "content": err_msg})
+
