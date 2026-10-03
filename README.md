@@ -15,12 +15,15 @@
 * **Multi-Format Ingestion**: Seamlessly upload and process `.pdf`, `.txt`, and `.md` files.
 * **Intelligent Chunking**: Boundary-aware recursive splitting (paragraph $\rightarrow$ sentence $\rightarrow$ word) with sliding window overlap.
 * **Vector Storage with `pgvector`**: Native PostgreSQL vector search using cosine distance (`<=>` operator).
+* **Multi-Turn Context & Query Reformulation**: Resolves pronouns and conversational context into standalone search queries.
+* **Agentic Tool Calling**: Integrated safe arithmetic calculator tool for numerical data calculations.
+* **Real-Time Token Streaming**: Real-time answer streaming via FastAPI and Streamlit `st.write_stream`.
 * **100% Free Stack Support**:
   * **LLM**: Powered by [Groq](https://console.groq.com/) (`openai/gpt-oss-120b`, `llama-3.1-8b-instant`, `qwen3.8-27b`).
   * **Embeddings**: Local, CPU-based embeddings using [FastEmbed](https://github.com/qdrant/fastembed) (`BAAI/bge-small-en-v1.5`, 384 dimensions) — zero API key required.
 * **Groundedness & Anti-Hallucination**: Answers are strictly grounded in retrieved passages with explicit page-level citations.
 * **Interactive UI**: Clean Streamlit dashboard with document vault management, chat history, and source inspection accordions.
-* **Automated Test Suite**: Full unit and integration test coverage with `pytest`.
+* **Automated Test Suite & Benchmarks**: Full unit, integration, and golden evaluation dataset benchmark coverage with `pytest`.
 
 ---
 
@@ -32,12 +35,14 @@ User / Browser
       ▼
 Streamlit UI (Port 8501)
       │
-      ▼ (REST API)
+      ▼ (REST API / SSE Streaming)
 FastAPI Backend (Port 8000)
       │
       ├── Ingestion ──► Parser ──► Cleaner ──► Chunker ──► FastEmbed ──► PostgreSQL (pgvector)
       │
-      └── Query ──────► FastEmbed ──► Cosine Retrieval ──► Context Builder ──► Groq LLM ──► Answer + Sources
+      ├── Tools ──────► Safe AST Calculator
+      │
+      └── Query ──────► Query Reformulator ──► FastEmbed ──► Cosine Retrieval ──► Context Builder ──► Groq LLM (Streaming) ──► Answer + Sources
 ```
 
 ---
@@ -46,12 +51,12 @@ FastAPI Backend (Port 8000)
 
 | Component | Technology | Description |
 | :--- | :--- | :--- |
-| **Backend API** | FastAPI / Pydantic | High-performance RESTful API with typed schemas |
+| **Backend API** | FastAPI / Pydantic | High-performance RESTful API with typed schemas & streaming |
 | **Database** | PostgreSQL 16 + pgvector | Unified relational metadata and vector storage |
 | **LLM Provider** | Groq Cloud API | High-speed, free-tier LLM inference |
 | **Embeddings** | FastEmbed (ONNX) | Free, CPU-optimized local dense embeddings |
-| **Frontend** | Streamlit | Responsive conversational UI with source cards |
-| **Testing** | pytest & httpx | Unit testing and end-to-end integration testing |
+| **Frontend** | Streamlit | Responsive conversational UI with streaming and source cards |
+| **Testing & Evals** | pytest & golden dataset | Unit testing, integration testing, and RAG benchmark evals |
 
 ---
 
@@ -114,9 +119,9 @@ streamlit run frontend/streamlit_app.py
 
 ---
 
-## 🧪 Running Tests
+## 🧪 Running Tests & Benchmarks
 
-Execute the automated test suite:
+Execute the automated test and benchmark suite:
 ```bash
 source .venv/bin/activate
 PYTHONPATH=. pytest tests/
@@ -124,10 +129,11 @@ PYTHONPATH=. pytest tests/
 
 ---
 
-## 📚 Project Documentation
+## 📚 Project Documentation & Course 1 Guide
 
-Detailed architecture specifications and engineering reasoning can be found in the [`docs/`](docs/) directory:
+Detailed architecture specifications, student learning modules, and engineering reasoning:
 
+* 🎓 **[`docs/STUDENT_LEARNING_GUIDE.md`](docs/STUDENT_LEARNING_GUIDE.md)** — **Course 1 Curriculum Learning Guide (M1 to M6 Code Mapping)**
 * [`docs/01-problem.md`](docs/01-problem.md) — Problem Statement & Solution Overview
 * [`docs/02-requirements.md`](docs/02-requirements.md) — Functional & Non-Functional Requirements
 * [`docs/03-architecture.md`](docs/03-architecture.md) — High-Level & Component Architecture
@@ -136,10 +142,12 @@ Detailed architecture specifications and engineering reasoning can be found in t
 * [`docs/06-embeddings.md`](docs/06-embeddings.md) — Embedding Providers & Vector Dimensions
 * [`docs/07-retrieval.md`](docs/07-retrieval.md) — Semantic Search & pgvector SQL Queries
 * [`docs/08-rag.md`](docs/08-rag.md) — End-to-End RAG Execution Lifecycle
-* [`docs/09-prompt-design.md`](docs/09-prompt-design.md) — Prompt Templates & Anti-Hallucination Controls
-* [`docs/10-evaluation.md`](docs/10-evaluation.md) — Evaluation Dimensions & Test Suite
+* [`docs/09-prompt-design.md`](docs/09-prompt-design.md) — Prompt Templates & Multi-Turn Reformulation
+* [`docs/10-evaluation.md`](docs/10-evaluation.md) — Evaluation Framework & Golden Dataset Benchmarking
 * [`docs/11-failure-modes.md`](docs/11-failure-modes.md) — Failure Mode Analysis & Mitigations
 * [`docs/12-design-decisions.md`](docs/12-design-decisions.md) — Architectural Trade-Offs & Decisions
+* [`docs/PROJECT_OVERVIEW.md`](docs/PROJECT_OVERVIEW.md) — Comprehensive System Design Specification
+
 
 ---
 

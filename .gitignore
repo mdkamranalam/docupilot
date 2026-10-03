@@ -20,6 +20,7 @@ htmlcov/
 .vscode/
 
 # Project Data & Uploads
-data/
+/data/
 uploads/
 *.db
+!tests/data/

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "tc_01",
+    "category": "direct_factual",
+    "question": "What is the reimbursement time frame in the refund policy?",
+    "expected_keywords": ["45 calendar days", "reimbursement", "days"]
+  },
+  {
+    "id": "tc_02",
+    "category": "numerical_calculation",
+    "question": "calculate (150 * 3) + 50",
+    "expected_keywords": ["500"]
+  },
+  {
+    "id": "tc_03",
+    "category": "unanswerable_anti_hallucination",
+    "question": "What is the company stock price on NASDAQ?",
+    "expected_keywords": ["not contain enough information"]
+  }
+]

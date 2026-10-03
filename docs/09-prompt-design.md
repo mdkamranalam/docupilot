@@ -12,7 +12,16 @@ Follow these strict guidelines:
 4. Tone: Clear, objective, concise, and professional.
 ```
 
+## Multi-Turn Question Reformulation Prompt
+```text
+Given the following conversation history and a follow-up question from the user, rephrase the follow-up question to be a standalone search query that contains all necessary context for document retrieval.
+
+Do NOT answer the question. Only return the reformulated standalone query. If the question is already standalone, return it as-is.
+```
+
 ## Anti-Hallucination Measures
 * **Low Temperature**: Default sampling temperature is set to `0.1` for maximum determinism.
 * **Refusal Trigger**: Instructs the model to explicitly return an unavailability statement if the context is missing or irrelevant.
 * **Source Isolation**: Each context chunk is explicitly labeled with filename and page metadata.
+* **Query Disambiguation**: Resolves pronouns across turns before semantic retrieval.
+
