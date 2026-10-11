@@ -101,6 +101,10 @@ POSTGRES_DB=docupilot_db
 ```bash
 docker compose up -d
 ```
+or
+```bash
+docker compose up --build
+```
 
 ### 5. Start the Backend API
 ```bash
